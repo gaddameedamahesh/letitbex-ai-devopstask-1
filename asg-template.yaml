@@ -1,0 +1,54 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Auto Scaling Group with Launch Template that auto-recovers EC2 instance when terminated.
+
+Resources:
+
+  MySecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Allow SSH access
+      VpcId: vpc-049a0c1b72de752b2
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: 22
+          ToPort: 22
+          CidrIp: 0.0.0.0/0
+
+  MyLaunchTemplate:
+    Type: AWS::EC2::LaunchTemplate
+    Properties:
+      LaunchTemplateName: MyLaunchTemplate
+      LaunchTemplateData:
+        InstanceType: t3.micro
+        KeyName: demo-server
+        ImageId: ami-08a6efd148b1f7504
+        SecurityGroupIds:
+          - !Ref MySecurityGroup
+        TagSpecifications:
+          - ResourceType: instance
+            Tags:
+              - Key: Name
+                Value: AutoScalingInstance
+
+  MyAutoScalingGroup:
+    Type: AWS::AutoScaling::AutoScalingGroup
+    Properties:
+      AutoScalingGroupName: MyASG
+      MinSize: '1'
+      MaxSize: '3'
+      DesiredCapacity: '1'
+      VPCZoneIdentifier:
+        - subnet-0cdd5f434ba9ad7e9
+      LaunchTemplate:
+        LaunchTemplateId: !Ref MyLaunchTemplate
+        Version: !GetAtt MyLaunchTemplate.LatestVersionNumber
+      Tags:
+        - Key: Name
+          Value: MyASGInstance
+          PropagateAtLaunch: true
+
+Outputs:
+  AutoScalingGroupName:
+    Description: The name of the Auto Scaling Group
+    Value: !Ref MyAutoScalingGroup
